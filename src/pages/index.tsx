@@ -1,15 +1,24 @@
-import type { NextPage } from "next";
+import { Button, TextField } from "@mui/material";
+import { DataGrid, GridRenderCellParams } from "@mui/x-data-grid";
+import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { Bike } from "@prisma/client";
 import Head from "next/head";
+import { useState } from "react";
 import { trpc } from "../utils/trpc";
 
-type TechnologyCardProps = {
-  name: string;
-  description: string;
-  documentation: string;
-};
+const Home = () => {
+  const [start, setStart] = useState<Date | null>(null);
+  const [end, setEnd] = useState<Date | null>(null);
+  const createRental = trpc.useMutation(["rental.create"]);
+  const { data: bikes, refetch } = trpc.useQuery([
+    "bike.query",
+    { start, end },
+  ]);
 
-const Home: NextPage = () => {
-  const hello = trpc.useQuery(["example.hello", { text: "from tRPC" }]);
+  if (!bikes) {
+    return <div>loading....</div>;
+  }
 
   return (
     <>
@@ -19,59 +28,82 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className="container mx-auto flex flex-col items-center justify-center min-h-screen p-4">
-        <h1 className="text-5xl md:text-[5rem] leading-normal font-extrabold text-gray-700">
-          Create <span className="text-purple-300">T3</span> App
-        </h1>
-        <p className="text-2xl text-gray-700">This stack uses:</p>
-        <div className="grid gap-3 pt-3 mt-3 text-center md:grid-cols-2 lg:w-2/3">
-          <TechnologyCard
-            name="NextJS"
-            description="The React framework for production"
-            documentation="https://nextjs.org/"
-          />
-          <TechnologyCard
-            name="TypeScript"
-            description="Strongly typed programming language that builds on JavaScript, giving you better tooling at any scale"
-            documentation="https://www.typescriptlang.org/"
-          />
-          <TechnologyCard
-            name="TailwindCSS"
-            description="Rapidly build modern websites without ever leaving your HTML"
-            documentation="https://tailwindcss.com/"
-          />
-          <TechnologyCard
-            name="tRPC"
-            description="End-to-end typesafe APIs made easy"
-            documentation="https://trpc.io/"
-          />
+      <main className="h-screen w-screen flex flex-col justify-between items-center relative p-4">
+        <div className="flex">
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DatePicker
+              label="Start"
+              value={start}
+              disablePast={true}
+              onChange={(newValue) => {
+                setStart(newValue);
+              }}
+              renderInput={(params) => <TextField {...params} />}
+            />
+            <DatePicker
+              label="End"
+              value={end}
+              disablePast={true}
+              onChange={(newValue) => {
+                setEnd(newValue);
+              }}
+              shouldDisableDate={(day) => {
+                return !start || day <= start;
+              }}
+              renderInput={(params) => <TextField {...params} />}
+            />
+          </LocalizationProvider>
         </div>
-        <div className="pt-6 text-2xl text-blue-500 flex justify-center items-center w-full">
-          {hello.data ? <p>{hello.data.greeting}</p> : <p>Loading..</p>}
+        <div className="w-full h-full p-12">
+          {start && end && start < end ? (
+            <DataGrid
+              columns={[
+                { field: "id", flex: 1 },
+                { field: "model", flex: 1 },
+                { field: "color", flex: 1 },
+                { field: "location", flex: 1 },
+                {
+                  field: "rating",
+                  flex: 1,
+                  valueGetter: ({ row }) =>
+                    isNaN(row.rating) ? "N/A" : row.rating,
+                },
+                {
+                  field: "actions",
+                  flex: 1,
+                  renderCell: ({ row }: GridRenderCellParams<Bike>) => (
+                    <Button
+                      onClick={() => {
+                        if (row?.id && start && end) {
+                          createRental.mutate(
+                            {
+                              bikeId: row.id,
+                              userId: 1,
+                              startDate: start,
+                              endDate: end,
+                            },
+                            {
+                              onSuccess: () => {
+                                refetch();
+                              },
+                            }
+                          );
+                        }
+                      }}
+                    >
+                      Rent
+                    </Button>
+                  ),
+                },
+              ]}
+              rows={bikes}
+            ></DataGrid>
+          ) : (
+            <div>Set date range to query for rentable bikes</div>
+          )}
         </div>
       </main>
     </>
-  );
-};
-
-const TechnologyCard = ({
-  name,
-  description,
-  documentation,
-}: TechnologyCardProps) => {
-  return (
-    <section className="flex flex-col justify-center p-6 duration-500 border-2 border-gray-500 rounded shadow-xl motion-safe:hover:scale-105">
-      <h2 className="text-lg text-gray-700">{name}</h2>
-      <p className="text-sm text-gray-600">{description}</p>
-      <a
-        className="mt-3 text-sm underline text-violet-500 decoration-dotted underline-offset-2"
-        href={documentation}
-        target="_blank"
-        rel="noreferrer"
-      >
-        Documentation
-      </a>
-    </section>
   );
 };
 
