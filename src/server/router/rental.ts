@@ -2,11 +2,37 @@ import { z } from "zod";
 import { createRouter } from "./context";
 
 export const rentalRouter = createRouter()
-  .query("getAll", {
+  .query("getForLoggedInUser", {
+    async resolve({ ctx }) {
+      const userId = ctx.session?.user?.id;
+
+      if (!userId) {
+        return null;
+      }
+      return await ctx.prisma.rental.findMany({
+        where: { userId },
+        include: { bike: true, user: true },
+      });
+    },
+  })
+  .query("getForUser", {
+    input: z.object({ userId: z.number() }),
     async resolve({ input, ctx }) {
       return await ctx.prisma.rental.findMany({
-        include: { user: true, bike: true },
+        where: { userId: input.userId },
+        include: { user: true },
       });
+    },
+  })
+  .query("getAll", {
+    async resolve({ ctx }) {
+      const role = ctx.session?.role;
+
+      if (role !== "MANAGER") {
+        return null;
+      }
+
+      return await ctx.prisma.rental.findMany({ include: { user: true } });
     },
   })
   .mutation("rate", {
@@ -32,6 +58,14 @@ export const rentalRouter = createRouter()
       userId: z.number(),
     }),
     async resolve({ input, ctx }) {
-      return ctx.prisma.rental.create({ data: input });
+      const userId = ctx.session?.user?.id;
+
+      if (!userId) {
+        return null;
+      }
+
+      return ctx.prisma.rental.create({
+        data: { ...input, userId },
+      });
     },
   });

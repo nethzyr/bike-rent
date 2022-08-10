@@ -1,6 +1,6 @@
 import { Button, Rating } from "@mui/material";
 import { DataGrid, GridRenderCellParams } from "@mui/x-data-grid";
-import { Bike, Rental, User } from "@prisma/client";
+import { Bike, User } from "@prisma/client";
 import { useState } from "react";
 import { trpc } from "../../utils/trpc";
 
@@ -9,7 +9,7 @@ const Rentals = () => {
     data: rentals,
     isLoading,
     refetch,
-  } = trpc.useQuery(["rental.getAll"]);
+  } = trpc.useQuery(["rental.getForLoggedInUser"]);
   const deleteRental = trpc.useMutation(["rental.delete"]);
 
   if (isLoading) {
@@ -91,7 +91,7 @@ const RatingCell = ({
 
   return (
     <Rating
-      name="simple-controlled"
+      name="rating"
       value={value}
       onChange={(event, newValue) => {
         if (newValue) {

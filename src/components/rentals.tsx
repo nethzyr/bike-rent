@@ -1,5 +1,5 @@
-import { Button, Checkbox } from "@mui/material";
-import { User } from "@prisma/client";
+import { Button, Rating } from "@mui/material";
+import { Bike, Rental, User } from "@prisma/client";
 import {
   CellContext,
   createColumnHelper,
@@ -7,36 +7,26 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useRouter } from "next/router";
-import { useState } from "react";
-import { trpc } from "../../../utils/trpc";
+import { trpc } from "../utils/trpc";
 
-const columnHelper = createColumnHelper<User>();
+const columnHelper = createColumnHelper<TRental>();
 
 const Actions = ({
   info,
   refetch,
 }: {
-  info: CellContext<User, User>;
+  info: CellContext<TRental, TRental>;
   refetch: () => void;
 }) => {
-  const deleteUser = trpc.useMutation(["user.delete"]);
-  const user = info.getValue();
-  const router = useRouter();
+  const deleteRental = trpc.useMutation(["rental.delete"]);
+  const { id } = info.getValue();
 
   return (
     <>
       <Button
         onClick={() => {
-          router.push(`/admin/users/${user.id}`);
-        }}
-      >
-        Edit
-      </Button>
-      <Button
-        onClick={() => {
-          deleteUser.mutate(
-            { userId: user.id },
+          deleteRental.mutate(
+            { id },
             {
               onSuccess: () => {
                 refetch();
@@ -51,25 +41,36 @@ const Actions = ({
   );
 };
 
-const Users = () => {
-  const [hideInactive, setHideInactive] = useState(false);
-  const { data, refetch } = trpc.useQuery(["user.getAll", { hideInactive }]);
+interface TRental extends Rental {
+  user?: User;
+  bike?: Bike;
+}
+
+const RentalsTable = ({
+  rentals,
+  refetch,
+}: {
+  rentals: TRental[];
+  refetch: () => void;
+}) => {
   const columns = [
     columnHelper.accessor("id", {
       cell: (info) => info.getValue(),
     }),
-    columnHelper.accessor((row) => row.email, {
-      id: "lastName",
-      cell: (info) => <i>{info.getValue()}</i>,
-      header: () => <span>Last Name</span>,
+    columnHelper.accessor("startDate", {
+      cell: (info) => info.getValue().toLocaleDateString(),
     }),
-    columnHelper.accessor("name", {
-      header: () => "Name",
-      cell: (info) => info.renderValue(),
+    columnHelper.accessor("endDate", {
+      cell: (info) => info.getValue().toLocaleDateString(),
     }),
-    columnHelper.accessor("role", {
-      header: () => "Role",
-      cell: (info) => info.renderValue(),
+    columnHelper.accessor("user.name", {
+      cell: (info) => info.getValue(),
+    }),
+    columnHelper.accessor("user.email", {
+      cell: (info) => info.getValue(),
+    }),
+    columnHelper.accessor("rating", {
+      cell: (info) => <Rating name="rating" value={info.getValue()} disabled />,
     }),
     columnHelper.accessor((row) => row, {
       id: "actions",
@@ -78,23 +79,13 @@ const Users = () => {
     }),
   ];
   const table = useReactTable({
-    data: data ?? [],
+    data: rentals,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
 
   return (
     <div className="p-2">
-      <label>
-        hide inactive users
-        <input
-          type="checkbox"
-          checked={hideInactive}
-          onChange={(event) => {
-            setHideInactive(event.target.checked);
-          }}
-        />
-      </label>
       <table>
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -128,4 +119,4 @@ const Users = () => {
   );
 };
 
-export default Users;
+export default RentalsTable;
