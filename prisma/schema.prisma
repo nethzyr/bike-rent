@@ -22,32 +22,21 @@ model Bike {
     model     String
     color     String
     location  String
-    available Boolean
+    available Boolean @default(true)
 
-    ratings Rating[]
     rentals Rental[]
-}
-
-model Rating {
-    id     Int     @id @default(autoincrement())
-    value  Int
-    rental Rental?
-
-    bikeId Int
-    bike   Bike @relation(fields: [bikeId], references: [id])
 }
 
 model Rental {
     id        Int      @id @default(autoincrement())
     startDate DateTime
     endDate   DateTime
+    rating    Int      @default(0)
 
-    ratingId Int?    @unique
-    rating   Rating? @relation(fields: [ratingId], references: [id], onDelete: Cascade)
-    bikeId   Int
-    bike     Bike    @relation(fields: [bikeId], references: [id])
-    userId   Int
-    user     User    @relation(fields: [userId], references: [id])
+    bikeId Int
+    bike   Bike @relation(fields: [bikeId], references: [id])
+    userId Int
+    user   User @relation(fields: [userId], references: [id])
 }
 
 // Necessary for Next auth

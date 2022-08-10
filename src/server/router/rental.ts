@@ -5,7 +5,16 @@ export const rentalRouter = createRouter()
   .query("getAll", {
     async resolve({ input, ctx }) {
       return await ctx.prisma.rental.findMany({
-        include: { user: true, bike: true, rating: true },
+        include: { user: true, bike: true },
+      });
+    },
+  })
+  .mutation("rate", {
+    input: z.object({ id: z.number(), rating: z.number().min(1).max(5) }),
+    async resolve({ input, ctx }) {
+      return await ctx.prisma.rental.update({
+        where: { id: input.id },
+        data: { rating: input.rating },
       });
     },
   })

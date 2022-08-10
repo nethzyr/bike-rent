@@ -1,11 +1,16 @@
 import { Button, Rating } from "@mui/material";
 import { DataGrid, GridRenderCellParams } from "@mui/x-data-grid";
-import { Bike, Rating as PrismaRating, Rental, User } from "@prisma/client";
+import { Bike, Rental, User } from "@prisma/client";
 import { useState } from "react";
 import { trpc } from "../../utils/trpc";
 
 const Rentals = () => {
-  const { data: rentals, isLoading } = trpc.useQuery(["rental.getAll"]);
+  const {
+    data: rentals,
+    isLoading,
+    refetch,
+  } = trpc.useQuery(["rental.getAll"]);
+  const deleteRental = trpc.useMutation(["rental.delete"]);
 
   if (isLoading) {
     return <>loading...</>;
@@ -41,18 +46,28 @@ const Rentals = () => {
               {
                 field: "rating",
                 flex: 1,
-                renderCell: ({
-                  value,
-                  row,
-                }: GridRenderCellParams<PrismaRating>) => (
-                  <RatingCell rating={value} rental={row} />
+                renderCell: ({ value, row }: GridRenderCellParams<number>) => (
+                  <RatingCell rating={value ?? 0} rentalId={row.id} />
                 ),
               },
               {
                 field: "actions",
                 flex: 1,
                 renderCell: ({ row }: GridRenderCellParams<any>) => (
-                  <Button onClick={() => {}}>Delete</Button>
+                  <Button
+                    onClick={() => {
+                      deleteRental.mutate(
+                        { id: row.id },
+                        {
+                          onSuccess: () => {
+                            refetch();
+                          },
+                        }
+                      );
+                    }}
+                  >
+                    Delete
+                  </Button>
                 ),
               },
             ]}
@@ -66,13 +81,13 @@ const Rentals = () => {
 
 const RatingCell = ({
   rating,
-  rental,
+  rentalId,
 }: {
-  rating: PrismaRating | undefined;
-  rental: Rental;
+  rating: number;
+  rentalId: number;
 }) => {
-  const mutateRating = trpc.useMutation(["rating.upsert"]);
-  const [value, setValue] = useState(rating?.value ?? 0);
+  const addRating = trpc.useMutation(["rental.rate"]);
+  const [value, setValue] = useState(rating);
 
   return (
     <Rating
@@ -81,12 +96,9 @@ const RatingCell = ({
       onChange={(event, newValue) => {
         if (newValue) {
           setValue(newValue);
-          mutateRating.mutate({
-            rental: {
-              id: rental.id,
-              bikeId: rental.bikeId,
-              rating: { value: newValue },
-            },
+          addRating.mutate({
+            id: rentalId,
+            rating: newValue,
           });
         }
       }}

@@ -15,14 +15,14 @@ export const bikeRouter = createRouter()
   .query("getAll", {
     async resolve({ ctx }) {
       const bikes = await ctx.prisma.bike.findMany({
-        include: { ratings: { select: { value: true } } },
+        include: { rentals: { select: { rating: true } } },
       });
 
       return bikes.map((bike) => ({
         ...bike,
         rating:
-          bike.ratings.reduce((acc, curr) => acc + curr.value, 0) /
-          bike.ratings.length,
+          bike.rentals.reduce((acc, curr) => acc + curr.rating, 0) /
+          bike.rentals.length,
       }));
     },
   })
@@ -60,15 +60,15 @@ export const bikeRouter = createRouter()
           NOT: { id: { in: rentedBikes?.map((bike) => bike.bikeId) } },
           available: true,
         },
-        include: { ratings: { select: { value: true } } },
+        include: { rentals: { select: { rating: true } } },
       });
 
       return bikes.map((bike) => {
         return {
           ...bike,
           rating:
-            bike.ratings.reduce((acc, curr) => acc + curr.value, 0) /
-            bike.ratings.length,
+            bike.rentals.reduce((acc, curr) => acc + curr.rating, 0) /
+            bike.rentals.length,
         };
       });
     },
