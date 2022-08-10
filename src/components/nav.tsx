@@ -24,6 +24,9 @@ const Nav = () => {
           <Link href="/admin/rentals">
             <a>Rentals</a>
           </Link>
+          <Link href="/admin/bikes">
+            <a>Bikes</a>
+          </Link>
         </>
       )}
     </nav>
