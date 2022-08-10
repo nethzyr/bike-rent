@@ -1,7 +1,6 @@
 import { Button, Checkbox } from "@mui/material";
 import { User } from "@prisma/client";
 import {
-  CellContext,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
@@ -13,15 +12,8 @@ import { trpc } from "../../../utils/trpc";
 
 const columnHelper = createColumnHelper<User>();
 
-const Actions = ({
-  info,
-  refetch,
-}: {
-  info: CellContext<User, User>;
-  refetch: () => void;
-}) => {
+const Actions = ({ user, refetch }: { user: User; refetch: () => void }) => {
   const deleteUser = trpc.useMutation(["user.delete"]);
-  const user = info.getValue();
   const router = useRouter();
 
   return (
@@ -52,8 +44,31 @@ const Actions = ({
 };
 
 const Users = () => {
-  const [hideInactive, setHideInactive] = useState(false);
-  const { data, refetch } = trpc.useQuery(["user.getAll", { hideInactive }]);
+  const [checked, setChecked] = useState(false);
+
+  return (
+    <div className="p-2">
+      <label>
+        hide users without rentals:
+        <Checkbox
+          checked={checked}
+          onChange={(event) => {
+            setChecked(event.target.checked);
+          }}
+        />
+      </label>
+      <UsersTable hideInactive={checked} />
+    </div>
+  );
+};
+
+export default Users;
+
+const UsersTable = ({ hideInactive }: { hideInactive: boolean }) => {
+  const { data, refetch, isLoading } = trpc.useQuery([
+    "user.getAll",
+    { hideInactive },
+  ]);
   const columns = [
     columnHelper.accessor("id", {
       cell: (info) => info.getValue(),
@@ -74,7 +89,7 @@ const Users = () => {
     columnHelper.accessor((row) => row, {
       id: "actions",
       header: () => <span>actions</span>,
-      cell: (info) => <Actions info={info} refetch={refetch} />,
+      cell: (info) => <Actions user={info.getValue()} refetch={refetch} />,
     }),
   ];
   const table = useReactTable({
@@ -83,18 +98,12 @@ const Users = () => {
     getCoreRowModel: getCoreRowModel(),
   });
 
+  if (isLoading) {
+    return <>loading...</>;
+  }
+
   return (
     <div className="p-2">
-      <label>
-        hide inactive users
-        <input
-          type="checkbox"
-          checked={hideInactive}
-          onChange={(event) => {
-            setHideInactive(event.target.checked);
-          }}
-        />
-      </label>
       <table>
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -127,5 +136,3 @@ const Users = () => {
     </div>
   );
 };
-
-export default Users;

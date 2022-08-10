@@ -9,7 +9,7 @@ import { useState } from "react";
 import { trpc } from "../utils/trpc";
 
 const Home = () => {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [start, setStart] = useState<Date | null>(null);
   const [end, setEnd] = useState<Date | null>(null);
   const createRental = trpc.useMutation(["rental.create"]);

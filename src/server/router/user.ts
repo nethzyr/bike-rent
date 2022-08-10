@@ -4,13 +4,13 @@ import { createProtectedRouter } from "./protected-router";
 
 export const userRouter = createProtectedRouter()
   .query("getAll", {
-    input: z.object({ hideInactive: z.boolean() }).nullish(),
+    input: z.object({ hideInactive: z.boolean() }),
     async resolve({ input, ctx }) {
       const users = await ctx.prisma.user.findMany({
         include: { rentals: true },
       });
 
-      if (input?.hideInactive) {
+      if (input.hideInactive) {
         return users.filter((user) => user.rentals.length);
       }
 
