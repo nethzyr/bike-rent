@@ -3,21 +3,40 @@ import { DataGrid, GridRenderCellParams } from "@mui/x-data-grid";
 import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { Bike } from "@prisma/client";
+import { signIn, signOut, useSession } from "next-auth/react";
 import Head from "next/head";
 import { useState } from "react";
 import { trpc } from "../utils/trpc";
 
 const Home = () => {
+  const { data: session, status } = useSession();
   const [start, setStart] = useState<Date | null>(null);
   const [end, setEnd] = useState<Date | null>(null);
   const createRental = trpc.useMutation(["rental.create"]);
-  const { data: bikes, refetch } = trpc.useQuery([
-    "bike.query",
-    { start, end },
-  ]);
+  const {
+    data: bikes,
+    refetch,
+    isLoading,
+  } = trpc.useQuery(["bike.query", { start, end }]);
+
+  if (isLoading || status === "loading") {
+    return <div>loading....</div>;
+  }
+
+  if (status === "unauthenticated") {
+    return (
+      <Button
+        onClick={() => {
+          signIn();
+        }}
+      >
+        Sign in
+      </Button>
+    );
+  }
 
   if (!bikes) {
-    return <div>loading....</div>;
+    return <div>error</div>;
   }
 
   return (
@@ -29,6 +48,13 @@ const Home = () => {
       </Head>
 
       <main className="h-screen w-screen flex flex-col justify-between items-center relative p-4">
+        <Button
+          onClick={() => {
+            signOut();
+          }}
+        >
+          Sign out
+        </Button>
         <div className="flex">
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <DatePicker
